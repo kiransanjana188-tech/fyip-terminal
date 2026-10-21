@@ -141,11 +141,11 @@ export function recordTradePrints(batch: PendingTradePrint[]): void {
            instrument_id, minute, price, volume, buy_volume, sell_volume, prints, price_volume)
          VALUES ${placeholders}
          ON CONFLICT(instrument_id, minute, price) DO UPDATE SET
-           volume = volume + excluded.volume,
-           buy_volume = buy_volume + excluded.buy_volume,
-           sell_volume = sell_volume + excluded.sell_volume,
-           prints = prints + excluded.prints,
-           price_volume = price_volume + excluded.price_volume`,
+           volume = futures_minute_volume.volume + excluded.volume,
+           buy_volume = futures_minute_volume.buy_volume + excluded.buy_volume,
+           sell_volume = futures_minute_volume.sell_volume + excluded.sell_volume,
+           prints = futures_minute_volume.prints + excluded.prints,
+           price_volume = futures_minute_volume.price_volume + excluded.price_volume`,
         ...params,
       );
     }
