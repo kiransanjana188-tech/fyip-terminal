@@ -298,7 +298,7 @@ export function loadFuturesAnalytics(query: FuturesAnalyticsQuery): FuturesAnaly
   // then bin prices to the requested row size in memory.
   const cells = queryAll<MinutePriceRow>(
     `SELECT minute, price, volume, buy_volume AS buy, sell_volume AS sell,
-            prints, price_volume AS priceVolume
+            prints, price_volume AS "priceVolume"
        FROM futures_minute_volume
       WHERE instrument_id = ? AND minute >= ?
       ORDER BY minute ASC`,
