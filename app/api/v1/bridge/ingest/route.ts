@@ -2,8 +2,10 @@ import { timingSafeEqual } from "node:crypto";
 import { fail, handler, ok } from "@/lib/api/respond";
 import { classifyTradeSide } from "@/lib/orderflow/classify";
 import { bridgeToken } from "@/lib/market/bridge-token";
+import { forwardBridgePayload } from "@/lib/market/cloud-forward";
 import { quoteHub } from "@/lib/market/hub";
 import {
+  lastArchiveFailure,
   recordDepthSnapshot,
   recordTradePrints,
   type PendingTradePrint,
@@ -118,5 +120,15 @@ export const POST = handler(async (req: Request) => {
 
   recordTradePrints(pendingTrades);
   quoteHub.setFeedConnection("ninjatrader", true);
-  return ok({ accepted, rejected, quotes, depthLadders, trades, errors, serverTime: new Date().toISOString() });
+  forwardBridgePayload(raw);
+  return ok({
+    accepted,
+    rejected,
+    quotes,
+    depthLadders,
+    trades,
+    errors,
+    archiveError: lastArchiveFailure(),
+    serverTime: new Date().toISOString(),
+  });
 });

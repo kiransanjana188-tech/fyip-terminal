@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, isPostgres } from "@/lib/db";
+import { lastArchiveFailure } from "@/lib/market/orderflow-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export async function GET() {
         hasDatabaseUrl: Boolean(process.env.NETLIFY_DB_URL),
         node: process.version,
         region: process.env.AWS_REGION ?? null,
+        archiveError: lastArchiveFailure(),
       },
       { headers: { "cache-control": "no-store" } },
     );

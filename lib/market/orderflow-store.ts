@@ -11,6 +11,12 @@ const MINUTE_KEY_LENGTH = 16;
 
 const lastDepthPersist = new Map<string, number>();
 let writesSincePrune = 0;
+let lastArchiveError: string | null = null;
+
+/** Last archive-write failure, exposed for deployment diagnostics. */
+export function lastArchiveFailure(): string | null {
+  return lastArchiveError;
+}
 
 function retentionHours(): number {
   const raw = Number(process.env.FYIP_ORDERFLOW_RETENTION_HOURS ?? 72);
@@ -144,8 +150,10 @@ export function recordTradePrints(batch: PendingTradePrint[]): void {
       );
     }
     maybePrune();
-  } catch {
+    lastArchiveError = null;
+  } catch (err) {
     // Archive failures must not interrupt live streaming.
+    lastArchiveError = err instanceof Error ? err.message : String(err);
   }
 }
 

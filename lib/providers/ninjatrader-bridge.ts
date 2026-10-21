@@ -6,6 +6,7 @@ import type {
   ProviderCapabilities,
 } from "./types";
 import type { DataStatus } from "@/lib/market/status";
+import { bridgeToken } from "@/lib/market/bridge-token";
 
 /**
  * NinjaTrader bridge adapter.
@@ -39,7 +40,7 @@ export class NinjaTraderBridgeProvider implements MarketDataProvider {
   }
 
   isConfigured(): boolean {
-    return typeof process.env.FYIP_BRIDGE_TOKEN === "string" && process.env.FYIP_BRIDGE_TOKEN.length > 0;
+    return Boolean(bridgeToken());
   }
 
   start(): void {
