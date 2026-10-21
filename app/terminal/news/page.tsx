@@ -1,11 +1,11 @@
 "use client";
 
-import { FypNews } from "@/components/terminal/news/FypNews";
+import { NewsWorkspace } from "@/components/terminal/news/NewsWorkspace";
 
 export default function NewsPage() {
   return (
     <div className="h-full min-h-0 p-2">
-      <FypNews />
+      <NewsWorkspace />
     </div>
   );
 }

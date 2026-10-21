@@ -6,6 +6,65 @@ clusters, and renders headlines with explicit timestamps, verification and
 interpretation labels. It does **not** scrape paywalled pages, invent missing
 text, or turn a rule-based impact note into a trading signal.
 
+## Official FinancialJuice headlines widget
+
+`/terminal/news` opens on the **FINANCIALJUICE** tab, which embeds the provider's
+official headline widget. The **FYIP ENGINE** tab contains the independent
+collected-stories engine described below. The two sources have separate status,
+data and attribution; no FinancialJuice headline is copied into the FYIP
+database by the widget.
+
+Official generator: <https://www.financialjuice.com/widgets/get-widget.aspx>
+
+FYIP loads the generator's helper and creates the `NEWS` widget with:
+
+```js
+FJWidgets.createWidget({
+  container: "financialjuice-news-widget-container",
+  height: "100%",
+  width: "100%",
+  mode: "Dark",
+  backColor: "1e222d",
+  fontColor: "b2b5be",
+  widgetType: "NEWS"
+});
+```
+
+The helper injects the generated provider iframe:
+
+```text
+https://feed.financialjuice.com/widgets/headlines.aspx
+  ?wtype=NEWS&mode=Dark&container=financialjuice-news-widget-container
+  &width=100%25&height=100%25&backC=1e222d&fontC=b2b5be&affurl=
+```
+
+FYIP only overrides the generated iframe's outer width/height/border CSS so it
+fills the workspace responsively. It does not proxy, scrape, alter or restyle
+cross-origin provider content, and the in-widget "Powered By FinancialJuice"
+attribution is retained.
+
+Widget status is deliberately narrow:
+
+- `LOADING` - the provider helper is being fetched.
+- `INITIALISING` - the helper is ready and FYIP is waiting for the iframe.
+- `AVAILABLE` - the iframe's `load` event fired. This does **not** prove the
+  headline feed is live or current; FinancialJuice controls that.
+- `UNAVAILABLE` - the helper/iframe failed or timed out. FYIP shows the actual
+  state, a provider link and a reload control; it does not fabricate headlines.
+
+FYIP cannot inspect the cross-origin iframe, so an in-provider login, subscribe,
+empty-feed or error page cannot be classified by FYIP. The UI never labels the
+widget "live".
+
+At implementation time the public widget loaded without an FYIP API key, FYIP
+login, or provider domain registration, and the response did not declare an
+`X-Frame-Options`/CSP frame restriction. No FinancialJuice account or paid
+entitlement is used. Commercial use, provider terms and any future domain or
+licensing restrictions remain the operator's responsibility. The provider page
+runs its own scripts, cookies and analytics inside the iframe; FYIP sends it no
+credentials. Automated or headless browsers may receive provider bot protection
+even when a normal browser loads the widget.
+
 ## Honesty rails
 
 - Publication time is nullable. A missing provider timestamp is shown as
@@ -165,7 +224,14 @@ Pausing the UI freezes the visible list but does not stop collection.
 
 ## UI behavior
 
-`/terminal/news` provides:
+`/terminal/news` provides two source tabs:
+
+- **FINANCIALJUICE** (default) - the official provider embed described above,
+  with responsive sizing, honest embed states, provider attribution and a
+  direct provider link.
+- **FYIP ENGINE** - the independent collected wire with all of the following.
+
+The FYIP engine view provides:
 
 - Breaking ticker, category/region/source filters, search and four sort modes.
 - Publication time (`PUB?` when unknown), FYIP receipt time and provider delay.
@@ -206,6 +272,13 @@ latest 40 runs.
 
 ## Known limitations
 
+- The FinancialJuice widget is a cross-origin provider embed. FYIP can detect
+  only the iframe load event, not individual headline freshness, a provider
+  login/error page, or server-side feed health.
+- Provider bot protection may challenge automated/headless browsers even though
+  the widget loads in a normal browser.
+- The official widget is independent of FYIP source health and saved headlines;
+  it does not populate the FYP NEWS database.
 - GDELT's public endpoint may rate-limit the deployment IP (HTTP 429). Health
   reports the failure and backoff; other sources continue.
 - Netlify collection depends on an active FYP NEWS session/stream or manual

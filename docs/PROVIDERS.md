@@ -68,6 +68,12 @@ adapter's `blocker` (what's missing, e.g. `FINNHUB_API_KEY unset`).
 Stubs intentionally `throw UnavailableError` — a provider without credentials
 must never emit fake values. They are visible in ADMIN with their blocker.
 
+The public **FinancialJuice headlines widget** on `/terminal/news` is a separate
+official client-side embed. It uses no `FYIP_FINANCIALJUICE_API_KEY`, squawk
+websocket or FYIP collector. Provider terms, domain restrictions and any
+commercial-use requirements are documented in
+[docs/FYP_NEWS.md](FYP_NEWS.md#official-financialjuice-headlines-widget).
+
 ## Options chains (GEX / 3D surface)
 
 `OptionsDataProvider.fetchChain(underlyingId)` returns contracts with expiration,

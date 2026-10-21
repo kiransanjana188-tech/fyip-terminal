@@ -18,7 +18,11 @@ function ShellBody({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SIDEBAR_KEY);
-      if (raw !== null) setSidebarOpen(raw === "true");
+      if (raw !== null) {
+        setSidebarOpen(raw === "true");
+      } else if (window.matchMedia("(max-width: 767px)").matches) {
+        setSidebarOpen(false);
+      }
     } catch { /* ignore */ }
   }, []);
 

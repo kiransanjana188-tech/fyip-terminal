@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useApi } from "@/lib/client/hooks";
 import type { NewsItemDTO } from "@/lib/client/types";
 import { FixtureBadge } from "@/components/ui/StatusBadge";
-import { Loading, ErrorState, EmptyState, BlockerNote } from "@/components/ui/States";
+import { Loading, ErrorState, EmptyState } from "@/components/ui/States";
 import { cn, dateTime } from "@/lib/utils";
 
 const PRIORITY_CLASS: Record<NewsItemDTO["priority"], string> = {
@@ -82,11 +83,18 @@ export function NewsWire({ compact = false }: { compact?: boolean }) {
       {loading && !data && <Loading label="Loading wire" />}
 
       {data && !data.hasRealContent && (
-        <div className="p-2">
-          <BlockerNote>
-            No live news provider is configured. Connect a licensed wire (e.g. FinancialJuice/Reuters) in ADMIN → Providers,
-            or set <span className="font-mono">FYIP_ENABLE_FIXTURES=true</span> to render clearly-labelled synthetic fixtures.
-          </BlockerNote>
+        <div className="border border-line bg-panel-2 p-2.5">
+          <div className="font-mono text-3xs uppercase tracking-widest text-amber">FYIP Wire</div>
+          <p className="mt-1 text-xs leading-relaxed text-ink-dim">
+            No FYIP-collected headlines are loaded in this compact view. Open FYP NEWS for the official
+            FinancialJuice headlines embed or the independent FYIP news engine with source health.
+          </p>
+          <Link
+            href="/terminal/news"
+            className="mt-1.5 inline-block border border-line-2 bg-panel px-2 py-1 font-mono text-3xs uppercase tracking-widest text-ink-dim hover:border-amber hover:text-amber"
+          >
+            Open FYP NEWS →
+          </Link>
         </div>
       )}
 

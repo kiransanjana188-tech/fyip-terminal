@@ -95,13 +95,15 @@ prints are inferred against the live quote and labelled "inferred", or stay
 
 ## FYP NEWS
 
-`/terminal/news` is the live financial-news engine: documented public feeds
-(Fed, BLS, BEA, ECB, BoE, BoJ, BoC, RBA, SEC press + 8-K, EIA, and GDELT when
-not rate-limited), RSS/Atom/RDF parsing, honest nullable publication timestamps,
-dedupe/clusters, verification labels, saved headlines and rule-based impact
-notes. Collection is request/SSE-triggered on Netlify (no always-on scheduler);
-the local server also runs a 60-second collector. Source Health exposes every
-upstream error instead of hiding it.
+`/terminal/news` opens on the official **FinancialJuice headlines** embed, with
+provider attribution retained and honest iframe states (never labelled "live"
+from a load event alone). The separate **FYIP ENGINE** tab is the independent
+collected wire: documented public feeds (Fed, BLS, BEA, ECB, BoE, BoJ, BoC, RBA,
+SEC press + 8-K, EIA, and GDELT when not rate-limited), RSS/Atom/RDF parsing,
+honest nullable publication timestamps, dedupe/clusters, verification labels,
+saved headlines and rule-based impact notes. Collection is request/SSE-triggered
+on Netlify (no always-on scheduler); the local server also runs a 60-second
+collector. Source Health exposes every upstream error instead of hiding it.
 
 Optional AI summaries require an OpenAI-compatible endpoint
 (`FYIP_AI_BASE_URL`, `FYIP_AI_API_KEY`, `FYIP_AI_MODEL`) and use only
