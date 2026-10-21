@@ -11,13 +11,14 @@ const nextConfig = {
     // function bundle that Netlify traces.
     outputFileTracingIncludes: {
       "/*": [
-        "./node_modules/@netlify/database/**/*",
-        "./node_modules/@netlify/runtime-utils/**/*",
-        "./node_modules/@neondatabase/serverless/**/*",
         "./node_modules/pg/**/*",
         "./node_modules/pg-*/**/*",
-        "./node_modules/waddler/**/*",
-        "./node_modules/ws/**/*",
+        "./node_modules/split2/**/*",
+        "./node_modules/postgres-array/**/*",
+        "./node_modules/postgres-bytea/**/*",
+        "./node_modules/postgres-date/**/*",
+        "./node_modules/postgres-interval/**/*",
+        "./node_modules/xtend/**/*",
       ],
     },
   },

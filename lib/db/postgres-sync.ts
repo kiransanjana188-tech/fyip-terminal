@@ -48,8 +48,6 @@ const RESPONSE_TIMEOUT_MS = 5_000;
  */
 const WORKER_SOURCE = `
 const { workerData } = require("node:worker_threads");
-const { getDatabase } = require("@netlify/database");
-const pg = require("pg");
 
 const state = new Int32Array(workerData.state);
 const port = workerData.port;
@@ -114,8 +112,31 @@ function toPg(sql) {
   return out;
 }
 
+function loadPg() {
+  const { createRequire } = require("node:module");
+  const path = require("node:path");
+  try {
+    return require("pg");
+  } catch (firstError) {
+    const bases = [process.cwd()];
+    if (process.argv[1]) {
+      bases.push(path.dirname(process.argv[1]));
+      bases.push(path.dirname(path.dirname(process.argv[1])));
+    }
+    if (process.env.LAMBDA_TASK_ROOT) bases.push(process.env.LAMBDA_TASK_ROOT);
+    for (const base of bases) {
+      try {
+        const localRequire = createRequire(path.join(base, "__fyip_pg__.js"));
+        return localRequire("pg");
+      } catch {}
+    }
+    throw firstError;
+  }
+}
+
 async function start() {
   try {
+    const pg = loadPg();
     if (workerData.connectionString && !process.env.NETLIFY_DB_URL) {
       process.env.NETLIFY_DB_URL = workerData.connectionString;
     }
@@ -125,8 +146,18 @@ async function start() {
     pg.types.setTypeParser(1700, function (value) {
       return value === null ? null : Number(value);
     });
-    const connection = getDatabase();
-    const pool = connection.pool;
+    const connectionString = workerData.connectionString || process.env.NETLIFY_DB_URL;
+    const pool = new pg.Pool({
+      connectionString: connectionString,
+      max: 4,
+      ssl: /sslmode=/.test(connectionString) ? undefined : { rejectUnauthorized: false },
+    });
+    const probe = await pool.connect();
+    try {
+      await probe.query("SELECT 1");
+    } finally {
+      probe.release();
+    }
 
     port.on("message", async function (request) {
       let response;
@@ -160,15 +191,17 @@ async function start() {
       Atomics.notify(state, 1);
     });
 
-    port.postMessage({ id: 0, type: "ready", ok: true, driver: connection.driver });
+    port.postMessage({ id: 0, type: "ready", ok: true, driver: "pg" });
     Atomics.store(state, 0, 1);
     Atomics.notify(state, 0);
   } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    const stack = error && error.stack ? String(error.stack).slice(0, 400) : "";
     port.postMessage({
       id: 0,
       type: "init-error",
       ok: false,
-      message: error && error.message ? error.message : String(error),
+      message: stack && message.indexOf(stack) === -1 ? message + " | " + stack : message,
     });
     Atomics.store(state, 0, 1);
     Atomics.notify(state, 0);
