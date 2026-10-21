@@ -1,0 +1,39 @@
+{
+  "name": "fyip-terminal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FYIP TERMINAL — institutional financial intelligence workstation",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
+    "bridge": "node bridge/reference-bridge.mjs"
+  },
+  "dependencies": {
+    "clsx": "2.1.1",
+    "lightweight-charts": "4.2.0",
+    "next": "14.2.15",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.16.11",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.15",
+    "postcss": "8.4.47",
+    "tailwindcss": "3.4.14",
+    "typescript": "5.6.3",
+    "vitest": "2.1.4"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

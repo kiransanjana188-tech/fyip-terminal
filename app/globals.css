@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fyip-base: #07080a;
+  --fyip-panel: #0c0e12;
+  --fyip-panel-2: #111419;
+  --fyip-line: #1e232c;
+  --fyip-ink: #e7eaee;
+  --fyip-ink-dim: #9aa3af;
+  --fyip-amber: #e0a63c;
+  --fyip-up: #22a06b;
+  --fyip-down: #e5484d;
+  --fyip-info: #3e8fb0;
+  --fyip-warn: #d9a441;
+
+  /* System font stacks (no network fetch at build time). */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--fyip-base);
+  color: var(--fyip-ink);
+  font-feature-settings: "ss01", "cv01", "tnum";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular numerals everywhere prices/quantities are shown. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Thin institutional scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a313c transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2a313c;
+  border-radius: 2px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Utility: dense data grid separators. */
+.grid-line {
+  border-color: var(--fyip-line);
+}
+
+@layer utilities {
+  .panel-border {
+    border: 1px solid var(--fyip-line);
+  }
+  .hairline-t {
+    border-top: 1px solid var(--fyip-line);
+  }
+  .hairline-b {
+    border-bottom: 1px solid var(--fyip-line);
+  }
+  .hairline-l {
+    border-left: 1px solid var(--fyip-line);
+  }
+  .hairline-r {
+    border-right: 1px solid var(--fyip-line);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+::selection {
+  background: rgba(224, 166, 60, 0.28);
+}
+
+:focus-visible {
+  outline: 1px solid var(--fyip-amber);
+  outline-offset: 1px;
+}

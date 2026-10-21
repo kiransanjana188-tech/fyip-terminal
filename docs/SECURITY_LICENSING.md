@@ -1,0 +1,64 @@
+# SECURITY & LICENSING
+
+## Authentication
+
+- Passwords: **scrypt** (N=16384, r=8, p=1) with per-user salt
+  (`lib/auth/password.ts`); stored as `scrypt$N$r$p$salt$hash` for transparent
+  upgrade later.
+- Sessions: server-side rows in `sessions`, cookie `fyip_session` = raw id
+  + HMAC signature (`FYIP_SESSION_SECRET`), 12h TTL, `HttpOnly`,
+  `SameSite=lax`, `Secure` in production. Sessions are single-purpose and can be
+  revoked in bulk (admin). Logout deletes the row + clears the cookie.
+- RBAC: permission strings checked per-route via `requirePermission()`; role
+  registry (`viewer|analyst|trader|admin`) is data, not code. Admin writes are
+  audited.
+
+`FYIP_SESSION_SECRET` is REQUIRED (≥16 chars) when `NODE_ENV=production` — the
+server refuses to issue sessions without it (401/500 paths remain honest).
+
+## Transport & headers
+
+- HTTPS termination is expected in front of the app (reverse proxy example in
+  README deployment notes); cookies are `Secure` in production.
+- Next.js default security headers apply; add CSP once surface stabilizes —
+  SSE requires `connect-src` to the terminal origin.
+
+## Guest mode
+
+`POST /api/v1/auth/guest` (used by the "Enter guest mode" button on `/login`)
+issues a normal 12h session for a shared `guest@fyip.local` user holding the
+**guest** role — read-only: `market/read`, `news.read`, `research.read`,
+`analytics.read`, `portfolio.read`. Critically there are no write permissions
+(alerts, workspaces, admin, bots) and the account's password is an unguessable
+random value (password login can never succeed). Each guest login is audited.
+Operators can disable the endpoint entirely with `FYIP_DISABLE_GUEST=true`.
+
+## Bridge endpoint hardening
+
+- `FYIP_BRIDGE_TOKEN` compared in constant time; ungated/unconfigured endpoint
+  answers `503 BRIDGE_NOT_CONFIGURED` (ahead of 401 to avoid token probing).
+- 2 MB / 5000-event ceilings per request; rejects malformed JSON, wrong
+  schemaVersion, disallowed `dataStatus` — errors are summarized, never echoed.
+- Bridge is **read-only market data**; there is no order/account surface to the
+  desktop platform, and the Add-On runs without any broker-facing permissions.
+- Audit entries record ingest outcomes + request IP (admin AUDIT page).
+
+## Personal-data footprint
+
+Seeded demo personal data is limited to emails/usernames (+ audit trail).
+Passwords are never logged; audit details carry no secrets.
+
+## Licensing & data-redistribution notes (operator responsibility summary)
+
+- Exchange market data (CME, etc.) is generally licensed per-user; routing it
+  through the bridge to others requires the relevant redistribution
+  entitlements. Set `dataStatus` truthfully in
+  `bridge_options.json` and keep deployments personal unless cleared.
+- Vendor news (NewsAPI, FinancialJuice, etc.) similarly carries per-subscriber
+  terms; the news engine never intended to publicly re-post headlines —
+  the assembly surfaces headlines with source label + time only.
+- Options analytics are computed locally (`fyip_calculated`); Open Interest is
+  reported with its publisher's entitlement string attached.
+- Fixture data is synthetic, so it is labelled SIMULATED at the type level
+  (`dataStatus="simulated"`, `entitlement="development-fixture"`, `is_fixture`
+  columns) — stripping the label would require code changes, not config.
