@@ -133,11 +133,11 @@ export function listNews(filter: NewsFilter = {}): NewsRow[] {
     params.push(filter.source);
   }
   if (filter.category) {
-    clauses.push("categories LIKE ?");
+    clauses.push("LOWER(categories) LIKE LOWER(?)");
     params.push(`%${filter.category}%`);
   }
   if (filter.query) {
-    clauses.push("(headline LIKE ? OR summary LIKE ?)");
+    clauses.push("(LOWER(headline) LIKE LOWER(?) OR LOWER(summary) LIKE LOWER(?))");
     params.push(`%${filter.query}%`, `%${filter.query}%`);
   }
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";

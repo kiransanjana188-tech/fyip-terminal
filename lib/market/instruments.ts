@@ -309,7 +309,7 @@ export function listInstruments(assetClass?: string): InstrumentRow[] {
 
 export function getInstrument(idOrSymbol: string): InstrumentRow | undefined {
   return queryOne<InstrumentRow>(
-    "SELECT * FROM instruments WHERE id = ? OR symbol = ? COLLATE NOCASE",
+    "SELECT * FROM instruments WHERE LOWER(id) = LOWER(?) OR LOWER(symbol) = LOWER(?)",
     idOrSymbol,
     idOrSymbol,
   );
@@ -325,7 +325,7 @@ export function getProviderSymbol(instrumentId: string, provider: string): strin
 }
 
 export function instrumentIdForSymbol(symbol: string): string | null {
-  const row = queryOne<{ id: string }>("SELECT id FROM instruments WHERE symbol = ? COLLATE NOCASE", symbol);
+  const row = queryOne<{ id: string }>("SELECT id FROM instruments WHERE LOWER(symbol) = LOWER(?)", symbol);
   return row?.id ?? null;
 }
 

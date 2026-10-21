@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { execute, newId, queryOne } from "@/lib/db";
 
@@ -15,13 +15,18 @@ export interface SessionRecord {
 
 function secret(): string {
   const s = process.env.FYIP_SESSION_SECRET;
-  if (!s || s.length < 16) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("FYIP_SESSION_SECRET must be set (>=16 chars) in production.");
-    }
-    return "dev-only-insecure-change-me-please-0000000000000000";
+  if (s && s.length >= 16) return s;
+  const dbUrl = process.env.NETLIFY_DB_URL;
+  if (dbUrl) {
+    // Netlify provisions the database URL for every function instance. Derive
+    // a stable signing key from it so signed cookies validate across instances
+    // without requiring a dashboard-configured secret.
+    return createHash("sha256").update(`fyip-session:${dbUrl}`).digest("base64url");
   }
-  return s;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("FYIP_SESSION_SECRET must be set (>=16 chars) in production.");
+  }
+  return "dev-only-insecure-change-me-please-0000000000000000";
 }
 
 function sign(value: string): string {

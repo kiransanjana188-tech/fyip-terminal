@@ -1,4 +1,4 @@
-import { execute, queryAll, queryOne } from "@/lib/db";
+import { execute, isPostgres, queryAll, queryOne } from "@/lib/db";
 import { quoteHub } from "@/lib/market/hub";
 import { bridgeThresholds, type DataStatus } from "@/lib/market/status";
 import type { DepthLevel, NormalizedDepth, NormalizedTrade } from "@/lib/providers/types";
@@ -32,50 +32,125 @@ function maybePrune(): void {
   }
 }
 
-export function recordTradePrint(trade: NormalizedTrade, sideSource: SideSource): void {
-  const minute = trade.eventTimestamp.slice(0, MINUTE_KEY_LENGTH);
-  const buy = trade.side === "buy" ? trade.size : 0;
-  const sell = trade.side === "sell" ? trade.size : 0;
+export interface PendingTradePrint {
+  trade: NormalizedTrade;
+  sideSource: SideSource;
+}
+
+const TRADE_BATCH_ROWS = 80;
+
+interface MinuteAggregate {
+  instrumentId: string;
+  minute: string;
+  price: number;
+  volume: number;
+  buy: number;
+  sell: number;
+  prints: number;
+  priceVolume: number;
+}
+
+/**
+ * Persist a whole bridge payload with a handful of round trips instead of one
+ * insert per print. Netlify Functions talk to Postgres over the network, so
+ * batching is what keeps ingest within the request budget.
+ */
+export function recordTradePrints(batch: PendingTradePrint[]): void {
+  if (batch.length === 0) return;
   try {
-    execute(
-      `INSERT INTO trade_prints (
-         instrument_id, provider, provider_symbol, price, size, side, side_source,
-         event_timestamp, received_timestamp, data_status, sequence)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      trade.instrumentId,
-      trade.provider,
-      trade.providerSymbol,
-      trade.price,
-      trade.size,
-      trade.side,
-      sideSource,
-      trade.eventTimestamp,
-      trade.receivedTimestamp,
-      trade.dataStatus,
-      trade.sequence,
-    );
-    execute(
-      `INSERT INTO futures_minute_volume (
-         instrument_id, minute, price, volume, buy_volume, sell_volume, prints, price_volume)
-       VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-       ON CONFLICT(instrument_id, minute, price) DO UPDATE SET
-         volume = volume + excluded.volume,
-         buy_volume = buy_volume + excluded.buy_volume,
-         sell_volume = sell_volume + excluded.sell_volume,
-         prints = prints + 1,
-         price_volume = price_volume + excluded.price_volume`,
-      trade.instrumentId,
-      minute,
-      trade.price,
-      trade.size,
-      buy,
-      sell,
-      trade.price * trade.size,
-    );
+    for (let start = 0; start < batch.length; start += TRADE_BATCH_ROWS) {
+      const chunk = batch.slice(start, start + TRADE_BATCH_ROWS);
+      const placeholders = chunk.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
+      const params: (string | number | null)[] = [];
+      for (const { trade, sideSource } of chunk) {
+        params.push(
+          trade.instrumentId,
+          trade.provider,
+          trade.providerSymbol,
+          trade.price,
+          trade.size,
+          trade.side,
+          sideSource,
+          trade.eventTimestamp,
+          trade.receivedTimestamp,
+          trade.dataStatus,
+          trade.sequence,
+        );
+      }
+      execute(
+        `INSERT INTO trade_prints (
+           instrument_id, provider, provider_symbol, price, size, side, side_source,
+           event_timestamp, received_timestamp, data_status, sequence)
+         VALUES ${placeholders}`,
+        ...params,
+      );
+    }
+
+    const aggregates = new Map<string, MinuteAggregate>();
+    for (const { trade } of batch) {
+      const minute = trade.eventTimestamp.slice(0, MINUTE_KEY_LENGTH);
+      const key = `${trade.instrumentId}|${minute}|${trade.price}`;
+      const current = aggregates.get(key);
+      const buy = trade.side === "buy" ? trade.size : 0;
+      const sell = trade.side === "sell" ? trade.size : 0;
+      if (current) {
+        current.volume += trade.size;
+        current.buy += buy;
+        current.sell += sell;
+        current.prints += 1;
+        current.priceVolume += trade.price * trade.size;
+      } else {
+        aggregates.set(key, {
+          instrumentId: trade.instrumentId,
+          minute,
+          price: trade.price,
+          volume: trade.size,
+          buy,
+          sell,
+          prints: 1,
+          priceVolume: trade.price * trade.size,
+        });
+      }
+    }
+
+    const rows = [...aggregates.values()];
+    for (let start = 0; start < rows.length; start += TRADE_BATCH_ROWS) {
+      const chunk = rows.slice(start, start + TRADE_BATCH_ROWS);
+      const placeholders = chunk.map(() => "(?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
+      const params: (string | number)[] = [];
+      for (const row of chunk) {
+        params.push(
+          row.instrumentId,
+          row.minute,
+          row.price,
+          row.volume,
+          row.buy,
+          row.sell,
+          row.prints,
+          row.priceVolume,
+        );
+      }
+      execute(
+        `INSERT INTO futures_minute_volume (
+           instrument_id, minute, price, volume, buy_volume, sell_volume, prints, price_volume)
+         VALUES ${placeholders}
+         ON CONFLICT(instrument_id, minute, price) DO UPDATE SET
+           volume = volume + excluded.volume,
+           buy_volume = buy_volume + excluded.buy_volume,
+           sell_volume = sell_volume + excluded.sell_volume,
+           prints = prints + excluded.prints,
+           price_volume = price_volume + excluded.price_volume`,
+        ...params,
+      );
+    }
     maybePrune();
   } catch {
     // Archive failures must not interrupt live streaming.
   }
+}
+
+export function recordTradePrint(trade: NormalizedTrade, sideSource: SideSource): void {
+  recordTradePrints([{ trade, sideSource }]);
 }
 
 export function recordDepthSnapshot(ladder: NormalizedDepth): void {
@@ -293,10 +368,14 @@ interface BarRow {
 export function archivedBars(instrumentId: string, stepSeconds: number, maxBars: number): ArchivedBar[] {
   const step = Math.max(1, Math.round(stepSeconds));
   const limit = Math.min(2000, Math.max(1, Math.round(maxBars)));
+  const bucket =
+    isPostgres()
+      ? "(EXTRACT(EPOCH FROM event_timestamp::timestamptz)::bigint / ?) * ?"
+      : "(CAST(strftime('%s', event_timestamp) AS INTEGER) / ?) * ?";
   const rows = queryAll<BarRow>(
     `WITH src AS (
        SELECT id, price, size, event_timestamp,
-              (CAST(strftime('%s', event_timestamp) AS INTEGER) / ?) * ? AS bucket
+              ${bucket} AS bucket
        FROM trade_prints
        WHERE instrument_id = ?
      ),
@@ -369,9 +448,14 @@ export function archiveDataStatus(latestIso: string | null): DataStatus {
   const ageMs = Date.now() - new Date(latestIso).getTime();
   if (!Number.isFinite(ageMs)) return "unavailable";
   const feed = quoteHub.feedState("ninjatrader");
-  if (!feed.connected) return "historical";
   const { staleSeconds, disconnectSeconds } = bridgeThresholds();
   const ageSeconds = ageMs / 1000;
+  if (!feed.connected) {
+    if (!isPostgres()) return "historical";
+    // Serverless instances do not see the bridge request directly; fall back to
+    // the age of the stored print.
+    if (ageSeconds > disconnectSeconds) return "historical";
+  }
   if (ageSeconds > disconnectSeconds) return "disconnected";
   if (ageSeconds > staleSeconds) return "stale";
   return "live";

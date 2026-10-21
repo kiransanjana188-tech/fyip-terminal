@@ -45,10 +45,14 @@ function seedAdmin(): void {
   const now = new Date().toISOString();
   execute(
     `INSERT INTO users (id, email, display_name, password_hash, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'active', ?, ?)`,
+     VALUES (?, ?, ?, ?, 'active', ?, ?)
+     ON CONFLICT(email) DO NOTHING`,
     id, email, "FYIP Administrator", hashPassword(password), now, now,
   );
-  execute("INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, 'role_admin')", id);
+  const seeded = queryOne<{ id: string }>("SELECT id FROM users WHERE email = ?", email);
+  if (seeded) {
+    execute("INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, 'role_admin')", seeded.id);
+  }
 }
 
 interface ProviderSeedRow {

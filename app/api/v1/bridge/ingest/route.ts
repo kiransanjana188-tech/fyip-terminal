@@ -1,8 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import { fail, handler, ok } from "@/lib/api/respond";
 import { classifyTradeSide } from "@/lib/orderflow/classify";
+import { bridgeToken } from "@/lib/market/bridge-token";
 import { quoteHub } from "@/lib/market/hub";
-import { recordDepthSnapshot, recordTradePrint } from "@/lib/market/orderflow-store";
+import {
+  recordDepthSnapshot,
+  recordTradePrints,
+  type PendingTradePrint,
+} from "@/lib/market/orderflow-store";
 import { normalizeBridgeEvent, normalizeDepthEvent, normalizeTradeEvent } from "@/lib/providers/ninjatrader-bridge";
 
 export const runtime = "nodejs";
@@ -12,7 +17,7 @@ const MAX_BODY_BYTES = 2_000_000; // 2 MB per request
 const MAX_EVENTS_PER_REQUEST = 5_000;
 
 function tokenMatches(provided: string | null): boolean {
-  const expected = process.env.FYIP_BRIDGE_TOKEN;
+  const expected = bridgeToken();
   if (!expected) return false;
   if (!provided) return false;
   const a = Buffer.from(provided);
@@ -32,7 +37,7 @@ function extractToken(req: Request): string | null {
  * controls. Rejects oversized payloads and malformed events.
  */
 export const POST = handler(async (req: Request) => {
-  if (!process.env.FYIP_BRIDGE_TOKEN) {
+  if (!bridgeToken()) {
     return fail(503, "BRIDGE_NOT_CONFIGURED", "Bridge ingestion is not configured (FYIP_BRIDGE_TOKEN unset).");
   }
   if (!tokenMatches(extractToken(req))) {
@@ -67,6 +72,7 @@ export const POST = handler(async (req: Request) => {
   let depthLadders = 0;
   let trades = 0;
   const errors: string[] = [];
+  const pendingTrades: PendingTradePrint[] = [];
 
   for (const ev of events) {
     const kind = (ev as { eventType?: unknown } | null)?.eventType;
@@ -90,7 +96,7 @@ export const POST = handler(async (req: Request) => {
         const { side, sideSource } = classifyTradeSide(trade.side, trade.price, quote?.bid, quote?.ask);
         const enriched = { ...trade, side, sideSource };
         quoteHub.ingestTrade(enriched);
-        recordTradePrint(enriched, sideSource);
+        pendingTrades.push({ trade: enriched, sideSource });
         accepted += 1;
         trades += 1;
       } else {
@@ -110,6 +116,7 @@ export const POST = handler(async (req: Request) => {
     }
   }
 
+  recordTradePrints(pendingTrades);
   quoteHub.setFeedConnection("ninjatrader", true);
   return ok({ accepted, rejected, quotes, depthLadders, trades, errors, serverTime: new Date().toISOString() });
 });

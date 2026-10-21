@@ -136,11 +136,19 @@ export function buildQuoteView(inst: InstrumentRow): QuoteView {
   }
 
   const feed = provider ? quoteHub.feedState(provider) : { connected: false };
+  // On serverless instances the bridge request may have landed on a different
+  // instance, so the in-memory feed flag is not authoritative. A persisted
+  // snapshot that is still inside the disconnect window counts as connected.
+  let connected = provider ? feed.connected : false;
+  if (!connected && receivedTimestamp) {
+    const ageSeconds = (Date.now() - new Date(receivedTimestamp).getTime()) / 1000;
+    connected = Number.isFinite(ageSeconds) && ageSeconds <= thresholds.disconnectSeconds;
+  }
   const dataStatus = deriveDataStatus({
     declared,
     eventTimestamp,
     receivedTimestamp,
-    connected: provider ? feed.connected : false,
+    connected,
     ...thresholds,
   });
 

@@ -49,7 +49,7 @@ export function ensureOptionInstrumentForQuote(q: NormalizedQuote): boolean {
   if (!parsed) return false;
 
   const contract = queryOne<InstrumentRow>(
-    "SELECT * FROM instruments WHERE symbol = ? COLLATE NOCASE AND asset_class = 'future'",
+    "SELECT * FROM instruments WHERE LOWER(symbol) = LOWER(?) AND asset_class = 'future'",
     parsed.contractCode,
   );
   if (!contract) return false;
