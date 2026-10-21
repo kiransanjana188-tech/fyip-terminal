@@ -95,6 +95,35 @@ If no provider is available, `/api/v1/gex/workspace` may fall back to the latest
 archived `options_snapshots` snapshot for the underlying and labels it
 `historical`. Development fixtures are always labelled `simulated`.
 
+## FYP NEWS feed adapters
+
+FYP NEWS uses a separate server-only registry in `lib/news/providers/index.ts`.
+These adapters return normalized `ParsedNewsItem` records; they do not touch the
+market-data hub. Endpoints are code-defined and exact-host allowlisted, and
+administrators cannot add arbitrary URLs.
+
+| Key | Format | Cadence | Status |
+| --- | --- | --- | --- |
+| `gdelt` | GDELT DOC 2.0 JSON | 15 min | Registered; public endpoint currently rate-limits this deployment (HTTP 429), reported honestly with backoff |
+| `federalreserve` | RSS | 10 min | Official |
+| `bls` | RSS | 15 min | Official |
+| `bea` | RSS | 30 min | Official |
+| `ecb` | RSS | 15 min | Official |
+| `boe` | RSS | 15 min | Official |
+| `boj` | RSS | 20 min | Official |
+| `boc` | RSS 1.0 / RDF | 20 min | Official |
+| `rba` | RSS 1.0 / RDF | 30 min | Official |
+| `sec` | RSS | 15 min | Official |
+| `sec-8k` | Atom | 15 min | Official filings; company statements |
+| `eia` | RSS | 30 min | Official |
+| `treasury` | - | disabled | No verified machine-readable endpoint; HTML is not scraped |
+| `cftc` | - | disabled | Same |
+
+Collection is request/SSE-triggered in the Netlify deployment because no
+always-on scheduler is configured; the local server also runs a 60-second
+collector. Provider interval and DB backoff are minimum gaps, not guarantees.
+See `docs/FYP_NEWS.md` for timestamp, dedupe, verification and licensing rules.
+
 ## Entitlements
 
 `entitlement` renders on every quote surface (the entitlement string from the

@@ -3,6 +3,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { ROLE_DEFINITIONS } from "@/lib/auth/rbac";
 import { seedInstrumentMaster } from "@/lib/market/instruments";
 import { seedFixtureNews } from "@/lib/news/engine";
+import { seedFypNewsSources } from "@/lib/news/seed";
 
 /**
  * Idempotent bootstrap data. Runs once per process via ensureSeeded().
@@ -18,6 +19,7 @@ export function ensureSeeded(): void {
   seedAdmin();
   seedProviders();
   seedNewsSources();
+  seedFypNewsSources();
   seedCompanyProfiles();
   if (process.env.FYIP_ENABLE_FIXTURES === "true") {
     seedEconomicFixtures();

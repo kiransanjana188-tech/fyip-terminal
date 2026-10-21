@@ -11,7 +11,7 @@ the UI is this table.
 | --- | --- | --- | --- |
 | HOME | Landing/dash | READY | overview panels, module grid, connection health |
 | MKT | Markets | READY | quote grid + SSE merge, watchlist add, status badges, continuous→front resolution |
-| NEWS | News wire | READY | DB-backed wire (fixtures only until a real source is configured), transparent priority rules, `is_fixture` labelling |
+| NEWS | FYP NEWS | READY | 12 enabled public feeds plus 2 unavailable registry entries (Treasury, CFTC); 11 healthy, GDELT rate-limited, RSS/Atom/RDF/GDELT parsing, honest publication timestamps, per-user saved headlines, dedupe/clusters, verification labels, rule-based impact notes, SSE live wire + source health/admin; serverless collection is request/SSE-triggered |
 | CAL | Econ calendar | READY | calendar/day events with `is_fixture` flags; importance colours |
 | MACRO | Macro series | READY | FRED-shaped series surface; empty series list until `FRED_API_KEY` + fetcher wired |
 | EQ | Equities research | READY | companies table (11 seeded profiles), quote + metrics; filings listed as BLOCKED |

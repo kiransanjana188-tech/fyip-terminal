@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { HttpError } from "@/lib/auth/current";
 import { ensureSeeded } from "@/lib/db/seed";
+import { ensureNewsCollector } from "@/lib/news/ingest";
 import { ensureProvidersStarted } from "@/lib/providers/registry";
 
 let bootstrapped = false;
@@ -8,6 +9,7 @@ function bootstrapOnce(): void {
   if (bootstrapped) return;
   ensureSeeded();
   ensureProvidersStarted();
+  ensureNewsCollector();
   bootstrapped = true;
 }
 

@@ -7,6 +7,7 @@ import { queryAll } from "@/lib/db";
 export const PERMISSIONS = [
   "market.read",
   "news.read",
+  "news.save",
   "research.read",
   "analytics.read",
   "portfolio.read",
@@ -47,6 +48,7 @@ export const ROLE_DEFINITIONS: Record<RoleKey, { name: string; description: stri
     permissions: [
       "market.read",
       "news.read",
+      "news.save",
       "research.read",
       "analytics.read",
       "alerts.write",
@@ -59,6 +61,7 @@ export const ROLE_DEFINITIONS: Record<RoleKey, { name: string; description: stri
     permissions: [
       "market.read",
       "news.read",
+      "news.save",
       "research.read",
       "analytics.read",
       "portfolio.read",

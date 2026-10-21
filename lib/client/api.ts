@@ -52,3 +52,10 @@ export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
     body: body === undefined ? undefined : JSON.stringify(body),
   }).then((r) => handle<T>(r));
 }
+
+export function apiDelete<T>(path: string): Promise<T> {
+  return fetch(`/api/v1${path}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  }).then((r) => handle<T>(r));
+}

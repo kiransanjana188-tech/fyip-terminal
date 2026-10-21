@@ -8,10 +8,10 @@ statuses, fixtures and blocked capabilities are always labelled.
 ## Stack
 
 - **Next.js 14 (App Router) full-stack** — API routes are the backend
-- **`node:sqlite`** for persistence (zero external services; PostgreSQL-ready shape)
+- **`node:sqlite`** locally / **Netlify Database (PostgreSQL)** in production, behind one sync query facade
 - **SSE** for live quote push (`/api/v1/stream/quotes`)
 - **lightweight-charts + canvas** for market charts and the 3D GEX surface
-- **vitest** (92 tests), **ESLint**, **tsc** strict
+- **vitest** (143 tests), **ESLint**, **tsc** strict
 
 ## Run it
 
@@ -93,6 +93,20 @@ Aggressor sides are only "provider" when the bridge supplies them; otherwise
 prints are inferred against the live quote and labelled "inferred", or stay
 "unknown". No bid/ask volume is reconstructed from OHLC.
 
+## FYP NEWS
+
+`/terminal/news` is the live financial-news engine: documented public feeds
+(Fed, BLS, BEA, ECB, BoE, BoJ, BoC, RBA, SEC press + 8-K, EIA, and GDELT when
+not rate-limited), RSS/Atom/RDF parsing, honest nullable publication timestamps,
+dedupe/clusters, verification labels, saved headlines and rule-based impact
+notes. Collection is request/SSE-triggered on Netlify (no always-on scheduler);
+the local server also runs a 60-second collector. Source Health exposes every
+upstream error instead of hiding it.
+
+Optional AI summaries require an OpenAI-compatible endpoint
+(`FYIP_AI_BASE_URL`, `FYIP_AI_API_KEY`, `FYIP_AI_MODEL`) and use only
+provider-supplied summary text. See [docs/FYP_NEWS.md](docs/FYP_NEWS.md).
+
 ## Derivatives
 
 - `/terminal/gex` — synchronized A/B gamma-exposure profiles per expiration or
@@ -123,6 +137,7 @@ See `docs/IMPLEMENTATION_MATRIX.md`.
 
 ## Docs
 
+- [docs/FYP_NEWS.md](docs/FYP_NEWS.md) — news sources, collection model, timestamps, verification, API/SSE
 - [docs/PROVIDERS.md](docs/PROVIDERS.md) — adapter contract, registry, blockers
 - [docs/NINJATRADER_BRIDGE.md](docs/NINJATRADER_BRIDGE.md) — bridge install/contract
 - [docs/ORDER_FLOW.md](docs/ORDER_FLOW.md) — order-flow workspaces, data rules and limits

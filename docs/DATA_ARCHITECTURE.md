@@ -1,9 +1,16 @@
 # DATA ARCHITECTURE
 
-Single SQLite database (`FYIP_DB_PATH`, default `./data/fyip.db`) created and
-migrated by `lib/db/migrations.ts` (v1–v8, forward-only). `lib/db/index.ts` keeps
-one `DatabaseSync` per process (WAL, foreign_keys ON, busy_timeout 5s) cached on
-`globalThis` so Next.js HMR/worker pools never open duplicate handles.
+Two storage modes share one blocking query API:
+
+- **Workstation/local:** SQLite at `FYIP_DB_PATH` (default `./data/fyip.db`),
+  created and migrated forward-only by `lib/db/migrations.ts` (currently v1–v10).
+  One `DatabaseSync` per process (WAL, foreign_keys ON, busy_timeout 5s) is
+  cached on `globalThis` so Next.js HMR/worker pools never open duplicate
+  handles.
+- **Netlify:** PostgreSQL through `lib/db/postgres-sync.ts` whenever
+  `NETLIFY_DB_URL` is present. The synchronous facade runs queries on a worker
+  thread and rewrites `?` placeholders to `$n`; `netlify/database/migrations/`
+  mirrors the SQLite schema (baseline + `0002_fyp_news.sql`).
 
 ## Volatility-aware storage shape
 
@@ -37,7 +44,7 @@ hydra in the way.
 | Identity | `users`, `roles`, `user_roles`, `sessions`, `audit_log` |
 | Instruments | `exchanges`, `instruments`, `instrument_mappings` |
 | Market data | `quote_snapshots`, `provider_state`, `trade_prints`, `depth_snapshots` |
-| News/econ/etc | `news_sources`, `news_items`, `econ_events`, `econ_series`, `econ_datapoints`, `companies`, `financials`, `filings` |
+| News/econ/etc | `news_sources`, `news_items` (legacy wire), `news_stories`, `news_story_impacts`, `news_saved`, `news_settings`, `news_ingest_runs`, `econ_events`, `econ_series`, `econ_datapoints`, `companies`, `financials`, `filings` |
 | Options/analytics | `option_chains`, `option_contracts`, `market_analytics` |
 | User objects | `watchlists`, `watchlist_items`, `workspaces`, `chart_layouts`, `alerts`, `alert_events` |
 | Portfolio | `portfolio_accounts`, `positions`, `trades` |
@@ -83,15 +90,45 @@ means no source has ever provided the instrument.
 
 **Never stored as status:** "fabricated" — if there is no data there is no data.
 
-## PostgreSQL migration path (documented intent)
+## PostgreSQL runtime
 
-The SQL surface is deliberately plain (`SELECT/INSERT/UPSERT`, no SQLite
-dialect beyond WAL pragmas). A thin adapter translating the ~10 helper queries
-to Postgres shapes is a contained change; `schema_migrations` stays the same to
-version both dialects.
+The application still uses one synchronous `queryAll/queryOne/execute` surface.
+When `NETLIFY_DB_URL` is present, `lib/db/postgres-sync.ts` proxies prepared
+statements to a `pg` pool in a worker thread (blocking the caller with
+`Atomics.wait`). Postgres type parsers return `int8`/`numeric` as numbers, and
+SQL is kept to `SELECT/INSERT/UPDATE/DELETE/UPSERT` plus standard
+`NULLS LAST`. Netlify applies `netlify/database/migrations/0001_baseline.sql`
+and `0002_fyp_news.sql`; SQLite applies `lib/db/migrations.ts` v1-v10. Keep both
+migration sets in sync when changing the schema.
+
+Known dialect care points: qualify RHS columns in `ON CONFLICT DO UPDATE` for
+Postgres, but keep LHS column names unqualified so SQLite stays compatible;
+avoid SQLite-only `INSERT OR IGNORE` outside the adapter (it rewrites it to
+`ON CONFLICT DO NOTHING`); never interpolate user strings into SQL. The query
+timer kills a worker after 30 seconds, so long maintenance must be chunked.
+
+## FYP NEWS storage
+
+`news_sources` stores the code-defined feed registry and per-source runtime
+state (endpoint, interval, ETag/Last-Modified, last success/error, backoff
+`next_attempt_at`, cumulative item count). `news_stories` stores one normalized
+row per story or development, with `published_at` nullable and separate
+`source_updated_at`, `received_at` and `ingested_at`. JSON columns hold source
+references, entities, keywords, asset classes and symbols.
+
+`news_story_impacts` stores rule-based interpretation records (never claims of
+observed positioning). `news_saved` is per-user headline state and `news_settings`
+holds retention/collection/custom keyword settings. `news_ingest_runs` records
+the latest 40 collection summaries. See `docs/FYP_NEWS.md` for the collection,
+verification, dedupe and timestamp rules.
 
 ## Backup / ops
 
 - File = SQLite DB dir (WAL + checkpointing on clean shutdown).
 - Nightly ops: `VACUUM INTO 'fyip-YYYYMMDD.db'` from cron for point-in-time
-  restore; expired sessions are the only normally-deleting data.
+  restore. Expired sessions and FYP NEWS retention pruning are the normal
+  deletions.
+- Netlify Postgres backup/restore is managed by Netlify Database; verify the
+  provider's current backup policy in the site dashboard. Run
+  `netlify/database/migrations/0002_fyp_news.sql` before deploying code that
+  reads the FYP NEWS tables.

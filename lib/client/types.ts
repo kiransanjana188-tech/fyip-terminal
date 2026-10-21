@@ -222,3 +222,225 @@ export interface CurrentUser {
   roles: string[];
   permissions: string[];
 }
+
+/* ------------------------------- FYP NEWS ------------------------------- */
+
+export type NewsPriorityDTO = "breaking" | "high" | "scheduled" | "market" | "research" | "general";
+export type NewsVerificationDTO = "official" | "corroborated" | "multi-source" | "single-source" | "unverified";
+export type NewsDirectionDTO = "up" | "down" | "two-way" | "watch";
+
+export interface NewsImpactDTO {
+  symbol: string;
+  assetClass: string;
+  direction: NewsDirectionDTO;
+  mechanism: string;
+  confidence: number;
+  isInterpretation: true;
+}
+
+export interface NewsSourceRefDTO {
+  providerKey: string;
+  sourceName: string;
+  url: string | null;
+  publishedAt: string | null;
+  receivedAt: string;
+  official: boolean;
+}
+
+export interface NewsStoryDTO {
+  id: string;
+  providerKey: string;
+  providerItemId: string;
+  sourceName: string;
+  sourceHomepage: string | null;
+  url: string | null;
+  canonicalUrl: string | null;
+  title: string;
+  summary: string | null;
+  publishedAt: string | null;
+  publishedKnown: boolean;
+  sourceUpdatedAt: string | null;
+  receivedAt: string;
+  ingestedAt: string;
+  updatedAt: string;
+  country: string | null;
+  region: string;
+  category: string;
+  subcategory: string | null;
+  entities: string[];
+  keywords: string[];
+  assetClasses: string[];
+  symbols: string[];
+  urgency: number;
+  relevance: number;
+  priority: NewsPriorityDTO;
+  verification: NewsVerificationDTO;
+  sourceCount: number;
+  sources: NewsSourceRefDTO[];
+  clusterId: string;
+  status: "new" | "updated" | "developing";
+  isBreaking: boolean;
+  contentHash: string;
+  dedupeKey: string;
+  attribution: string;
+  license: string;
+  isFixture: boolean;
+  impacts: NewsImpactDTO[];
+  saved: boolean;
+  clusterSize: number;
+}
+
+export interface NewsCountsDTO {
+  total: number;
+  last24h: number;
+  breaking: number;
+  saved: number;
+}
+
+export interface NewsSourceHealthDTO {
+  key: string;
+  name: string;
+  kind: string;
+  homepage: string | null;
+  endpoint: string | null;
+  enabled: boolean;
+  official: boolean;
+  attribution: string;
+  license: string;
+  intervalSeconds: number;
+  regionHint: string | null;
+  categoryHint: string | null;
+  lastPolledAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  consecutiveFailures: number;
+  nextAttemptAt: string | null;
+  itemsTotal: number;
+  lastLatencyMs: number | null;
+  lastItemCount: number;
+  unavailableReason: string | null;
+  status: "ok" | "stale" | "error" | "pending" | "disabled" | "unavailable";
+}
+
+export interface NewsSourceFacetDTO {
+  key: string;
+  name: string;
+  count: number;
+}
+
+export interface NewsStoriesDTO {
+  stories: NewsStoryDTO[];
+  total: number;
+  limit: number;
+  offset: number;
+  counts: NewsCountsDTO;
+  sources: NewsSourceFacetDTO[];
+  hasRealContent: boolean;
+  lastCollectionAt: string | null;
+  generatedAt: string;
+  methodology: string;
+  disclaimer: string;
+}
+
+export interface NewsAiStatusDTO {
+  enabled: boolean;
+  model: string | null;
+  reason: string | null;
+}
+
+export interface NewsHealthDTO {
+  generatedAt: string;
+  counts: NewsCountsDTO;
+  sources: NewsSourceHealthDTO[];
+  enabledSources: number;
+  healthySources: number;
+  lastRun: NewsIngestRunDTO | null;
+  collection: {
+    mode: string;
+    collectionEnabled: boolean;
+    retentionDays: number;
+    note: string;
+  };
+  ai: NewsAiStatusDTO;
+  methodology: string;
+  disclaimer: string;
+}
+
+export interface NewsIngestSourceDetailDTO {
+  key: string;
+  status: "ok" | "not-modified" | "error" | "skipped";
+  items: number;
+  inserted: number;
+  merged: number;
+  clustered: number;
+  duplicates: number;
+  latencyMs: number;
+  error?: string;
+}
+
+export interface NewsIngestRunDTO {
+  id: number;
+  startedAt: string;
+  finishedAt: string;
+  providersTried: number;
+  itemsSeen: number;
+  inserted: number;
+  merged: number;
+  clustered: number;
+  errors: number;
+  detail: unknown;
+}
+
+export interface NewsSettingsDTO {
+  retentionDays: number;
+  collectionEnabled: boolean;
+  customKeywords: Record<string, string[]>;
+  lastPruneAt: string | null;
+}
+
+export interface NewsAdminDTO {
+  settings: NewsSettingsDTO;
+  sources: NewsSourceHealthDTO[];
+  ai: NewsAiStatusDTO;
+  policy: {
+    endpointsEditable: boolean;
+    note: string;
+    minIntervalSeconds: number;
+    maxIntervalSeconds: number;
+  };
+}
+
+export interface NewsCollectSummaryDTO {
+  startedAt: string;
+  finishedAt: string;
+  providersTried: number;
+  itemsSeen: number;
+  inserted: number;
+  merged: number;
+  clustered: number;
+  errors: number;
+  budgetExhausted: boolean;
+  details: NewsIngestSourceDetailDTO[];
+  counts?: NewsCountsDTO;
+  collectionEnabled?: boolean;
+  mode?: string;
+}
+
+export interface NewsDetailDTO {
+  story: NewsStoryDTO;
+  related: NewsStoryDTO[];
+  sources: NewsSourceHealthDTO[];
+  ai: NewsAiStatusDTO;
+  methodology: string;
+  disclaimer: string;
+}
+
+export interface NewsSummarizeDTO {
+  enabled: boolean;
+  reason?: string;
+  storyId?: string;
+  summary?: string;
+  model?: string;
+  generatedAt?: string;
+  notice?: string;
+}

@@ -571,4 +571,122 @@ export const migrations: Migration[] = [
        GROUP BY instrument_id, substr(event_timestamp, 1, 16), price;
     `,
   },
+  {
+    version: 10,
+    name: "fyp_news_engine",
+    sql: `
+      -- FYP NEWS: rich story records, real source provenance, clustered
+      -- developments and per-user saved headlines. Publication time is nullable
+      -- on purpose: providers sometimes omit it and FYIP must not invent one.
+      ALTER TABLE news_sources ADD COLUMN endpoint TEXT;
+      ALTER TABLE news_sources ADD COLUMN format TEXT NOT NULL DEFAULT 'rss';
+      ALTER TABLE news_sources ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 900;
+      ALTER TABLE news_sources ADD COLUMN attribution TEXT;
+      ALTER TABLE news_sources ADD COLUMN license TEXT;
+      ALTER TABLE news_sources ADD COLUMN region_hint TEXT;
+      ALTER TABLE news_sources ADD COLUMN category_hint TEXT;
+      ALTER TABLE news_sources ADD COLUMN official INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE news_sources ADD COLUMN last_polled_at TEXT;
+      ALTER TABLE news_sources ADD COLUMN last_success_at TEXT;
+      ALTER TABLE news_sources ADD COLUMN last_error TEXT;
+      ALTER TABLE news_sources ADD COLUMN consecutive_failures INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE news_sources ADD COLUMN etag TEXT;
+      ALTER TABLE news_sources ADD COLUMN last_modified TEXT;
+      ALTER TABLE news_sources ADD COLUMN next_attempt_at TEXT;
+      ALTER TABLE news_sources ADD COLUMN items_total INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE news_sources ADD COLUMN last_latency_ms INTEGER;
+      ALTER TABLE news_sources ADD COLUMN last_item_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE news_sources ADD COLUMN unavailable_reason TEXT;
+
+      CREATE TABLE news_stories (
+        id                TEXT PRIMARY KEY,
+        provider_key      TEXT NOT NULL,
+        provider_item_id  TEXT NOT NULL,
+        source_name       TEXT NOT NULL,
+        source_homepage   TEXT,
+        url               TEXT,
+        canonical_url     TEXT,
+        title             TEXT NOT NULL,
+        summary           TEXT,
+        published_at      TEXT,
+        published_known   INTEGER NOT NULL DEFAULT 0,
+        source_updated_at TEXT,
+        received_at       TEXT NOT NULL,
+        ingested_at       TEXT NOT NULL,
+        updated_at        TEXT NOT NULL,
+        country           TEXT,
+        region            TEXT NOT NULL,
+        category          TEXT NOT NULL,
+        subcategory       TEXT,
+        entities          TEXT NOT NULL DEFAULT '[]',
+        keywords          TEXT NOT NULL DEFAULT '[]',
+        asset_classes     TEXT NOT NULL DEFAULT '[]',
+        symbols           TEXT NOT NULL DEFAULT '[]',
+        urgency           INTEGER NOT NULL,
+        relevance         INTEGER NOT NULL,
+        priority          TEXT NOT NULL,
+        verification      TEXT NOT NULL,
+        source_count      INTEGER NOT NULL DEFAULT 1,
+        sources           TEXT NOT NULL,
+        cluster_id        TEXT NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'new',
+        is_breaking       INTEGER NOT NULL DEFAULT 0,
+        content_hash      TEXT NOT NULL,
+        dedupe_key        TEXT NOT NULL,
+        attribution       TEXT,
+        license           TEXT,
+        is_fixture        INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(provider_key, provider_item_id),
+        UNIQUE(dedupe_key)
+      );
+      CREATE INDEX idx_news_stories_received ON news_stories(received_at DESC);
+      CREATE INDEX idx_news_stories_published ON news_stories(published_at DESC);
+      CREATE INDEX idx_news_stories_category ON news_stories(category, received_at DESC);
+      CREATE INDEX idx_news_stories_region ON news_stories(region, received_at DESC);
+      CREATE INDEX idx_news_stories_cluster ON news_stories(cluster_id);
+      CREATE INDEX idx_news_stories_priority ON news_stories(priority, received_at DESC);
+      CREATE INDEX idx_news_stories_canonical ON news_stories(canonical_url);
+
+      CREATE TABLE news_story_impacts (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        story_id          TEXT NOT NULL,
+        symbol            TEXT NOT NULL,
+        asset_class       TEXT NOT NULL,
+        direction         TEXT NOT NULL,
+        mechanism         TEXT NOT NULL,
+        confidence        REAL NOT NULL,
+        is_interpretation INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(story_id, symbol)
+      );
+      CREATE INDEX idx_news_impacts_story ON news_story_impacts(story_id);
+      CREATE INDEX idx_news_impacts_symbol ON news_story_impacts(symbol);
+
+      CREATE TABLE news_saved (
+        user_id  TEXT NOT NULL,
+        story_id TEXT NOT NULL,
+        saved_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, story_id)
+      );
+
+      CREATE TABLE news_settings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE news_ingest_runs (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at     TEXT NOT NULL,
+        finished_at    TEXT NOT NULL,
+        providers_tried INTEGER NOT NULL,
+        items_seen     INTEGER NOT NULL,
+        inserted       INTEGER NOT NULL,
+        merged         INTEGER NOT NULL,
+        clustered      INTEGER NOT NULL,
+        errors         INTEGER NOT NULL,
+        detail         TEXT NOT NULL DEFAULT '[]'
+      );
+      CREATE INDEX idx_news_ingest_runs_finished ON news_ingest_runs(finished_at DESC);
+    `,
+  },
 ];

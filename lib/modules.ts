@@ -43,7 +43,7 @@ export const MODULES: ModuleDef[] = [
   { key: "HOME", path: "/terminal", title: "Overview", group: "Overview", status: "implemented", description: "Cross-asset dashboard: market strip, macro snapshot, top movers and news." },
   { key: "MKT", path: "/terminal/markets", title: "Markets Overview", group: "Markets", status: "implemented", description: "Sortable multi-asset quote tables with status badges, spreads and session state." },
 
-  { key: "NEWS", path: "/terminal/news", title: "News Wire", group: "Macro & News", status: "partial", description: "Prioritised headline wire with filters, dedupe and source attribution.", permission: "news.read", dependency: "A licensed wire (e.g. FinancialJuice/Reuters) for live headlines; fixtures available when enabled." },
+  { key: "NEWS", path: "/terminal/news", title: "FYP NEWS", group: "Macro & News", status: "implemented", description: "Global financial news engine: documented public feeds, clustered developments, verification labels, honest publication times, source health, saved headlines, SSE updates and potential-impact interpretations.", permission: "news.read" },
   { key: "CAL", path: "/terminal/calendar", title: "Economic Calendar", group: "Macro & News", status: "partial", description: "Global scheduled releases with importance, actual/consensus/previous and source.", permission: "news.read", dependency: "FRED or a licensed macro calendar for real values." },
   { key: "MACRO", path: "/terminal/macro", title: "Macro Dashboard", group: "Macro & News", status: "partial", description: "Policy rates, yield curve, inflation and labour trends, event overlays.", permission: "news.read", dependency: "FRED/ECB/official sources for time series." },
 
