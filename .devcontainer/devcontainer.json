@@ -1,0 +1,13 @@
+{
+  "name": "FYIP Terminal",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "npm ci",
+  "postAttachCommand": "bash -lc 'pgrep -f \"next dev\" >/dev/null || npm run dev'",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "FYIP Terminal",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}
